@@ -1,9 +1,9 @@
 This program takes an input LL1 grammar and a source program and generates
 a fake intermediate language (for now).  
 
-FunnyWalks is free.  As such it is licensed as GPLv3 or latter.
+SillyWalks is free.  As such it is licensed as GPLv3 or latter.
 
-FunnyWalks is designed to allow the grammar to be changed on the fly.
+SillyWalks is designed to allow the grammar to be changed on the fly.
 
 currently it is being made for a Universal Compiler class being taken
 at the university of Colorado, Denver under the instruction of Dr. Boris

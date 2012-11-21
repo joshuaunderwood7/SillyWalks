@@ -15,6 +15,7 @@ from LL1Table import BUILDTABLE
 #from pprint import pprint
 from Generator import DOACTION, verbose
 import Generator
+from SymbolTable import display
 
 VERBOSE = False
 DEBUG = False
@@ -22,12 +23,12 @@ PARSE_STACK = []
 SYMANTIC_STACK = []
 
 class EOP:
-    
+
     RightIndex = 0
     LeftIndex = 0
     CurrentIndex = 0
     TopIndex = 0
-        
+
     def __init__(self,  _left_index=None, _right_index = None,
                    _current_index = None, _top_index = None):
         self.RightIndex = _right_index;
@@ -47,7 +48,7 @@ def LLDriver(_Grammar, _Table):
     RightIndex = 0
     CurrentIndex = 0
     TopIndex = 1
-    
+
 #   Push(S); -- Push the Start Symbol onto an empty stack
     PARSE_STACK.append(FindSystemGoal(_Grammar))
     SYMANTIC_STACK.append(FindSystemGoal(_Grammar))
@@ -59,22 +60,22 @@ def LLDriver(_Grammar, _Table):
             PARSE_STACK,
             SYMANTIC_STACK,
             EOP(LeftIndex, RightIndex, CurrentIndex, TopIndex))
-    
+
     while (PARSE_STACK != []):
 #   -- let X be the top stack symbol; let a be the current input token
         X = PARSE_STACK[len(PARSE_STACK)-1]
 #        print X, a
-        
+
         if X in _Grammar.nonterminals:
             try: #T(X, a) = X -> Y1Y2. . .Ym, (if table lookup is a production number)
                 lookup = _Table[(X,ConvertToSymbol(a[0]))] #hack to try to get tokens to Grammar symbol
-                
+
                 DISPLAY('NonTerminal. Table('+X+", "+(ConvertToSymbol(a[0]))+') = ' + str(lookup),
                         a[0] + scanner2_0.InputString[0:-1],
                         PARSE_STACK,
                         SYMANTIC_STACK,
                         EOP(LeftIndex, RightIndex, CurrentIndex, TopIndex))
-                
+
             #    -- Expand nonterminal, replace X with Y1Y2. . .Ym on the stack.
             #    -- Begin with Ym, then Ym-1, . . . , and Y1 will be on top of the stack.
                 PARSE_STACK.pop()
@@ -92,9 +93,9 @@ def LLDriver(_Grammar, _Table):
             except:
             #    -- process syntax error
                 print "!error! /LLParset/LLDriver/if/nonterminals/ syntax error."
-                if DEBUG: x = raw_input("ERROR!") 
+                if DEBUG: x = raw_input("ERROR!")
             #end if
-            
+
         elif X == GrammarAnalizer_0_3.LAMBDA:
             DISPLAY("Lambda encountered",
                     a[0] + scanner2_0.InputString[0:-1],
@@ -135,7 +136,7 @@ def LLDriver(_Grammar, _Table):
             CurrentIndex += 1
             PARSE_STACK.pop()
             SYMANTIC_STACK = SYMANTIC_STACK[:TopIndex]
-            
+
         else: #X is an action symbol
             DISPLAY("Action. X = " + X,
                     a[0] + scanner2_0.InputString[0:-1],
@@ -146,7 +147,7 @@ def LLDriver(_Grammar, _Table):
             #call symantic function
             DOACTION(PARSE_STACK.pop(), SYMANTIC_STACK, EOP(LeftIndex, RightIndex, CurrentIndex, TopIndex))
             #PARSE_STACK.pop()  #Done in action call
-            
+
 
         #end if;
     #end loop;
@@ -159,7 +160,7 @@ def FindSystemGoal(_Grammar):
     #reached end of grammar with no start symbol
     print "!error! /LLParset/FindSystemGoal/ No start symbol found in grammar."
     print "!error! /LLParset/FindSystemGoal/ Using first production."
-    return _Grammar.nonterminals[0].name
+    return _Grammar.productions[0].name
 
 def ConvertToToken(_TerminalSymbol):
     tokens = [
@@ -167,6 +168,7 @@ def ConvertToToken(_TerminalSymbol):
             "LPAREN", "RPAREN", "SEMICOLON", "COMMA", "ASSIGNOP",
             "PLUSOP", "MINUSOP", "SCANEOF",
             "EQUALITYOP", "EXPONENTIATIONOP",
+            "FUNCTION", "RETURN",
             ]
 
 
@@ -174,8 +176,9 @@ def ConvertToToken(_TerminalSymbol):
             "(",")",";",",",":=",
             "+","-","$",
             "=", "**",
-            ]      
-    try: 
+            "FUNCTION", "RETURN",
+            ]
+    try:
         index = symbols.index(_TerminalSymbol)
         return tokens[index]
     except:
@@ -187,6 +190,7 @@ def ConvertToSymbol(_TerminalSymbol):
             "LPAREN", "RPAREN", "SEMICOLON", "COMMA", "ASSIGNOP",
             "PLUSOP", "MINUSOP", "SCANEOF",
             "EQUALITYOP", "EXPONENTIATIONOP",
+            "FUNCTION", "RETURN",
             ]
 
 
@@ -194,32 +198,35 @@ def ConvertToSymbol(_TerminalSymbol):
             "(",")",";",",",":=",
             "+","-","$",
             "=", "**",
-            ]      
+            "FUNCTION", "RETURN",
+            ]
     index = tokens.index(_TerminalSymbol)
     return symbols[index]
 
 def DISPLAY(_FirstLine, _input, _Parse_Stack, _Symantic_Stack, _EOP):
     if VERBOSE:
         print _FirstLine
-        print "Input:" 
+        print "Input:"
         print _input
         print "Parse Stack:"
         for i in range(1,len(_Parse_Stack)+1):
             print len(_Parse_Stack)-i,":",_Parse_Stack[len(_Parse_Stack)-i]
-        print "Symantic Stack:" 
+        print "Symantic Stack:"
         for i in range(1,len(_Symantic_Stack)+1):
             print len(_Symantic_Stack)-i,":",_Symantic_Stack[len(_Symantic_Stack)-i]
         print "Indices: "
         print _EOP
         for i in range(0,40): print "-",
         print
-        if DEBUG: x = raw_input("Press Enter to continue") 
+        print "Symbol Table:"
+        display()
+        if DEBUG: x = raw_input("Press Enter to continue")
 
 def DISPLAYMATCH(_a, _input,_PARSE_STACK):
     if VERBOSE:
-        print "MATCH","||", _a[0], _input,"||",_PARSE_STACK        
+        print "MATCH","||", _a[0], _input,"||",_PARSE_STACK
         for i in range (0,40): print "-",
-        print 
+        print
 
 
 def ProcessGrammar(filename):
@@ -239,11 +246,11 @@ def InitilizeScanFile(filename):
 
         scanner2_0.InputString = str(f.read())
         f.close()
-    
+
 def GetTable(grammar):
     return BUILDTABLE(grammar)
 
- 
+
 
 def main():
     if len(sys.argv) >= 3:

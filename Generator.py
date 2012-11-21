@@ -1,6 +1,8 @@
 #-------------------------------------------------------------------------------
-# Name:                 
-# Purpose:    
+# Name:         Generator
+# Purpose:    This module creates the output for the source code.
+#            More important is that any action symbols' methods
+#            are defined here.
 #
 # Author:      Joshua Underwood
 #
@@ -8,10 +10,13 @@
 # Copyright:   (c) Joshua Underwood 2012
 # Licence:     GPLv3 or latter
 #-------------------------------------------------------------------------------
+import SymbolTable
+
 _list = []
 _max_temp = []
 _max_symbol = 256
 _symbol_table =[]
+
 
 verbose = False
 
@@ -30,13 +35,16 @@ def Display(functionName, inputStr):
         print output.rjust(80)
         """
 
-def setVerbose(bool):
+def setVerbose(_bool):
     global verbose
-    verbose = True
+    verbose = _bool
 
 def Start():
+    Display("Start", _list)
     global _max_symbol
     _max_symbol = 256
+    if not SymbolTable._initilized : SymbolTable.initilize(0, 32)
+    SymbolTable.newScope()
 
 
 def WRITE(strings):
@@ -59,10 +67,14 @@ def Generate1(S1):
 
 
 def ExtractRec(Record):
+#Record must be tuple (<token>,<name/token>)
+#retrieves the memory location for the symbol (variable)
     Display("ExtractRec", _list)
-    return Record[1]
+    return SymbolTable.getLocationString(Record)
 
 def ExtractOp(Record):
+#Record must be tuple (<token>,<name/token>)
+#returns false if the Record is not a recognized operation
     Display("ExtractOp", _list)
     if Record[0] == "MINUSOP":
         return "SUB "
@@ -71,31 +83,37 @@ def ExtractOp(Record):
     else:
         return False
 
+
 def Extract(Record):
+#Record must be tuple (<token>,<name/token>)
+#returns semantic content of record
     Display("Extract", _list)
+    
     _Op = ExtractOp(Record)
     if _Op: return _Op
-    return ExtractRec(Record)
+    _Rec = ExtractRec(Record)
+    if _Rec != None: return _Rec
+    #Default return the syntactic input
+    return Record[1]
 
 def LookUp(symbol):
+#Is symbol in hash table? returns True or False.
     Display("Lookup", _list)
-    if symbol in _symbol_table:
+    pointer = SymbolTable.getPointer(symbol)
+    if pointer != None:
         return True
     return False
 
 def Enter(symbol):
+#add a variable to the hash table and string space
     Display("Enter", _list)
-    if len(_symbol_table) < _max_symbol:
-        _symbol_table.append(symbol)
-    else:
-        print "!error! /Enter/> SymbolTableOverflow"
+    SymbolTable.enterSymbol(symbol)
 
 def CheckId(symbol):
     Display("CheckId", _list)
     if not LookUp(symbol):
         Enter(symbol)
         Generate3("Declare ", Extract(symbol), "Integer")
-
 
 def GetTemp():
     Display("GetTemp", _list)
@@ -139,13 +157,12 @@ def GenInfix(E1, Op, E2, _to, S_STACK):
     S_STACK[_to] = ERec
     return ERec
 
-#       ProcessId: Declare Id, enter it into the semantic table, andimport pdb; pdb.set_trace()
-    
+#       ProcessId: Declare Id, enter it into the semantic table, and
 #       build a corresponding semantic record
 def ProcessId(E, S_STACK):
     Display("ProcessId", _list)
     CheckId(S_STACK[E])
-    S_STACK[E-1] = S_STACK[E]
+    #S_STACK[E-1] = S_STACK[E]
     #x = raw_input("Enter to continue")
     return S_STACK[E]
 
@@ -155,7 +172,7 @@ def ProcessId(E, S_STACK):
 def ProcessLiteral(E, S_STACK):
     Display("ProcessLiteral", _list)
     #unused because of dynamic type and touple storage from scanner
-    S_STACK[E-1] = S_STACK[E]
+    #S_STACK[E-1] = S_STACK[E]
     return S_STACK[E]
 
 #   ProcessOp: Produce operator descriptor
@@ -163,17 +180,22 @@ def ProcessOp(O, S_STACK):
     Display("ProcessOp", _list)
     # O.Op = CurrentToken
     #unused because of dynamic type and touple storage from scanner
-    S_STACK[O-1] = S_STACK[O]
+    #S_STACK[O-1] = S_STACK[O]
     return S_STACK[O]
 
-#   Finish: Generate code to finish program
+def ClearScope():
+# Clears the local variables from SymbolTable upon competion of subprogram
+    Display("ClearScope",_list)
+    SymbolTable.clearScope()
+
 def Finish():
+#   Finish: Generate code to finish program
     Display("Finish", _list)
     Generate1('Halt')
 
 def DOACTION(_action, SYMANTIC_STACK = None, EOP = None):
     #print _action, SYMANTIC_STACK, EOP
-    if _action[0] != "#": 
+    if _action[0] != "#":
         print "!error! /Generator/DOACTION/ input not an action symbol"
         return False
     _action = _action[1:]
@@ -192,13 +214,13 @@ def DOACTION(_action, SYMANTIC_STACK = None, EOP = None):
         try:
             globals()[_action](*paramaters, S_STACK = SYMANTIC_STACK)
         except:
-            print "!error! /Generator/DOACTION/ Function", _action,"does not exist"
+            print "!error! /Generator/DOACTION/ Function", _action,"does not exist, or has error"
 
     except:
         try:
-            globals()[_action]
+            globals()[_action]()
         except:
-            print "!error! /Generator/DOACTION/ Function", _action,"does not exist"
+            print "!error! /Generator/DOACTION/ Function", _action,"does not exist, or has error"
 
 def GETPARAMETER(string, SYMANTIC_STACK, EOP):
     try:
@@ -217,14 +239,24 @@ def GETPARAMETER(string, SYMANTIC_STACK, EOP):
         return None
     print "!error! /Generator/GETPARAMETER/ invalid string"
     return None
-    
 
-            
+
+
 def main():
+    setVerbose(True)
     _action = "#GenInfix($$,$1,$2)"
+    _action = "#GenInfix($$,$1,$2)"
+    _action = "#ProcessId($1)"
     SS = ("(a,a)", "(b,b)", "(c,c)")
+    
+    
+    
     from LLParser import EOP
     eop = EOP(0,1,1,3)
+    _action = "#Start"
+    DOACTION(_action, SS, eop)
+    
+    _action = "#ProcessId($1)"
     try:
         DOACTION(_action, SS, eop)
     except:

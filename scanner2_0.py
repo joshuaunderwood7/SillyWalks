@@ -51,6 +51,7 @@ tokens = [
 "LPAREN", "RPAREN", "SEMICOLON", "COMMA", "ASSIGNOP",
 "PLUSOP", "MINUSOP", "SCANEOF",
 "EQUALITYOP", "EXPONENTIATIONOP",
+"FUNCTION", "RETURN",
 ]
 
 LETTER = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -194,6 +195,7 @@ tokens = [
 "LPAREN", "RPAREN", "SEMICOLON", "COMMA", "ASSIGNOP",
 "PLUSOP", "MINUSOP", "SCANEOF",
 "EQUALITYOP", "EXPONENTIATIONOP",
+"FUNCTION", "RETURN",
 ]
 
 
@@ -201,6 +203,7 @@ symbols = [ "BEGIN", "END", "READ", "WRITE", "ID", "[\d]",
 "(",")",";",",",":=",
 "+","-","$",
 "=", "**",
+"FUNCTION", "RETURN",
 ]
 comment = ["--",]
 
